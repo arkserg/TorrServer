@@ -124,6 +124,8 @@ func addTorrent(req torrReqJS, c *gin.Context) {
 			}
 		}
 
+		tor.EnsureDLNATitles()
+
 		if req.SaveToDB {
 			torr.SaveTorrentToDB(tor)
 		}

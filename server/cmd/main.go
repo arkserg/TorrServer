@@ -165,6 +165,7 @@ func watchTDir(dir string) {
 								if tor.Title == "" {
 									tor.Title = tor.Name()
 								}
+								tor.EnsureDLNATitles()
 								torr.SaveTorrentToDB(tor)
 								tor.Drop()
 								os.Remove(filename)

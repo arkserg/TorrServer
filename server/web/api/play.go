@@ -66,6 +66,8 @@ func play(c *gin.Context) {
 		return
 	}
 
+	tor.EnsureDLNATitles()
+
 	// find file
 	index := -1
 	if len(tor.Files()) == 1 {

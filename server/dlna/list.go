@@ -12,6 +12,7 @@ import (
 	"github.com/anacrolix/dms/dlna"
 	"github.com/anacrolix/dms/upnpav"
 
+	"server/dlnatitles"
 	"server/log"
 	mt "server/mimetype"
 	"server/settings"
@@ -269,7 +270,8 @@ func getObjFromTorrent(path, parent, host string, torr *torr.Torrent, file *stat
 		log.TLogln("mime type", mime.String(), file.Path)
 	}
 
-	title := normalizeTitle(file.Path)
+	hashHex := torr.TorrentSpec.InfoHash.HexString()
+	title := dlnatitles.Lookup(hashHex, file.Path)
 
 	obj := upnpav.Object{
 		ID:         parent + "%2F" + url.PathEscape(file.Path),

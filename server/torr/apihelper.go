@@ -82,6 +82,7 @@ func AddTorrent(spec *torrent.TorrentSpec, title, poster string, data string, ca
 
 func SaveTorrentToDB(torr *Torrent) {
 	log.TLogln("save to db:", torr.Hash())
+	torr.EnsureDLNATitles()
 	AddTorrentDB(torr)
 }
 
@@ -177,6 +178,7 @@ func RemTorrent(hashHex string) {
 			}
 		}
 	}
+	sets.RemDLNATitles(hashHex)
 	RemTorrentDB(hash)
 }
 

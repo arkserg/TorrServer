@@ -117,6 +117,8 @@ func stream(c *gin.Context) {
 		tor.Title = tor.Name()
 	}
 
+	tor.EnsureDLNATitles()
+
 	// save to db
 	if save {
 		torr.SaveTorrentToDB(tor)
@@ -222,6 +224,8 @@ func streamNoAuth(c *gin.Context) {
 		c.AbortWithError(http.StatusInternalServerError, errors.New("timeout connection torrent"))
 		return
 	}
+
+	tor.EnsureDLNATitles()
 
 	// find file
 	index := -1
