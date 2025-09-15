@@ -36,6 +36,13 @@ func normalizeTitle(path string) string {
 		log.TLogln("normalizeTitle: input", path)
 	}
 
+	if cached := settings.GetDLNATitle(path); cached != "" {
+		if settings.BTsets.EnableDebug {
+			log.TLogln("normalizeTitle: cache hit", cached)
+		}
+		return cached
+	}
+
 	apiKey := os.Getenv("OPENAI_API_KEY")
 	model := os.Getenv("OPENAI_MODEL")
 	if apiKey == "" || model == "" {
@@ -103,6 +110,7 @@ func normalizeTitle(path string) string {
 			log.TLogln("normalizeTitle: normalized title", title)
 		}
 		if title != "" {
+			settings.SetDLNATitle(path, title)
 			return title
 		}
 	} else if settings.BTsets.EnableDebug {
