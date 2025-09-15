@@ -17,6 +17,7 @@ func ensureDLNATitles(t *Torrent) {
 	}
 
 	status := t.Status()
+	var mediaPaths []string
 	for _, file := range status.FileStats {
 		if file == nil || file.Path == "" {
 			continue
@@ -31,8 +32,14 @@ func ensureDLNATitles(t *Torrent) {
 		if !mime.IsMedia() {
 			continue
 		}
-		dlnatitles.Ensure(hash, file.Path)
+		mediaPaths = append(mediaPaths, file.Path)
 	}
+
+	if len(mediaPaths) == 0 {
+		return
+	}
+
+	dlnatitles.EnsureTorrent(hash, mediaPaths)
 }
 
 // EnsureDLNATitles precomputes and stores normalized DLNA titles for torrent media files.

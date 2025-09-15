@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"server/log"
@@ -31,36 +32,91 @@ type openAIChatResponse struct {
 	} `json:"choices"`
 }
 
-// Ensure makes sure the DLNA title cache for a given torrent file contains a normalized title.
-// It returns the cached title, generating and storing one using OpenAI if necessary.
-func Ensure(hashHex, path string) string {
+var ensureLocks sync.Map
+
+// EnsureTorrent prepares DLNA titles for all provided torrent files in a single batch.
+// It skips regeneration when a bucket for the torrent already exists and guards concurrent
+// workers with a per-torrent mutex to avoid races.
+func EnsureTorrent(hashHex string, paths []string) {
 	if settings.BTsets.EnableDebug {
-		log.TLogln("dlnatitles.Ensure: input", hashHex, path)
+		log.TLogln("dlnatitles.EnsureTorrent: input", hashHex, len(paths))
 	}
 
-	if cached := settings.GetDLNATitle(hashHex, path); cached != "" {
-		if settings.BTsets.EnableDebug {
-			log.TLogln("dlnatitles.Ensure: cache hit", cached)
+	hashHex = strings.ToLower(strings.TrimSpace(hashHex))
+	if hashHex == "" || len(paths) == 0 {
+		return
+	}
+
+	uniquePaths := make([]string, 0, len(paths))
+	seen := make(map[string]struct{}, len(paths))
+	for _, path := range paths {
+		if path == "" {
+			continue
 		}
-		return cached
+		if _, ok := seen[path]; ok {
+			continue
+		}
+		seen[path] = struct{}{}
+		uniquePaths = append(uniquePaths, path)
+	}
+	if len(uniquePaths) == 0 {
+		return
 	}
 
-	title, err := generateNormalizedTitle(path)
-	if err != nil {
+	unlock := lockTorrent(hashHex)
+	defer unlock()
+
+	if settings.HasDLNATitleBucket(hashHex) {
 		if settings.BTsets.EnableDebug {
-			log.TLogln("dlnatitles.Ensure: generation failed", err)
+			log.TLogln("dlnatitles.EnsureTorrent: bucket already exists")
+		}
+		return
+	}
+
+	titles := make(map[string]string, len(uniquePaths))
+	for _, path := range uniquePaths {
+		title, err := generateNormalizedTitle(path)
+		if err != nil && settings.BTsets.EnableDebug {
+			log.TLogln("dlnatitles.EnsureTorrent: generation failed", err)
+		}
+		title = strings.TrimSpace(title)
+		if title == "" {
+			title = path
+		}
+		titles[path] = title
+		if settings.BTsets.EnableDebug {
+			log.TLogln("dlnatitles.EnsureTorrent: prepared title", path, "->", title)
 		}
 	}
-	if title == "" {
-		title = path
+
+	if len(titles) == 0 {
+		return
 	}
 
-	settings.SetDLNATitle(hashHex, path, title)
+	if settings.HasDLNATitleBucket(hashHex) {
+		if settings.BTsets.EnableDebug {
+			log.TLogln("dlnatitles.EnsureTorrent: bucket appeared during generation, skipping store")
+		}
+		return
+	}
+
+	settings.StoreDLNATitles(hashHex, titles)
 	if settings.BTsets.EnableDebug {
-		log.TLogln("dlnatitles.Ensure: stored title", title)
+		log.TLogln("dlnatitles.EnsureTorrent: stored titles", len(titles))
 	}
+}
 
-	return title
+func lockTorrent(hashHex string) func() {
+	if hashHex == "" {
+		return func() {}
+	}
+	muIface, _ := ensureLocks.LoadOrStore(hashHex, &sync.Mutex{})
+	mu := muIface.(*sync.Mutex)
+	mu.Lock()
+	return func() {
+		mu.Unlock()
+		ensureLocks.Delete(hashHex)
+	}
 }
 
 // Lookup returns the cached DLNA title for the given torrent file or falls back to the original path.
