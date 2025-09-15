@@ -269,7 +269,8 @@ func getObjFromTorrent(path, parent, host string, torr *torr.Torrent, file *stat
 		log.TLogln("mime type", mime.String(), file.Path)
 	}
 
-	title := normalizeTitle(file.Path)
+	hashHex := torr.TorrentSpec.InfoHash.HexString()
+	title := normalizeTitle(hashHex, file.Path)
 
 	obj := upnpav.Object{
 		ID:         parent + "%2F" + url.PathEscape(file.Path),

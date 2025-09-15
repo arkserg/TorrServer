@@ -31,12 +31,12 @@ type openAIChatResponse struct {
 	} `json:"choices"`
 }
 
-func normalizeTitle(path string) string {
+func normalizeTitle(hashHex, path string) string {
 	if settings.BTsets.EnableDebug {
-		log.TLogln("normalizeTitle: input", path)
+		log.TLogln("normalizeTitle: input", hashHex, path)
 	}
 
-	if cached := settings.GetDLNATitle(path); cached != "" {
+	if cached := settings.GetDLNATitle(hashHex, path); cached != "" {
 		if settings.BTsets.EnableDebug {
 			log.TLogln("normalizeTitle: cache hit", cached)
 		}
@@ -110,7 +110,7 @@ func normalizeTitle(path string) string {
 			log.TLogln("normalizeTitle: normalized title", title)
 		}
 		if title != "" {
-			settings.SetDLNATitle(path, title)
+			settings.SetDLNATitle(hashHex, path, title)
 			return title
 		}
 	} else if settings.BTsets.EnableDebug {

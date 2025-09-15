@@ -1,7 +1,6 @@
 package torr
 
 import (
-	"encoding/json"
 	"io"
 	"os"
 	"path/filepath"
@@ -165,28 +164,6 @@ func RemTorrent(hashHex string) {
 		return
 	}
 	hash := metainfo.NewHashFromHex(hashHex)
-	var paths []string
-	if tor := bts.GetTorrent(hash); tor != nil {
-		st := tor.Status()
-		for _, f := range st.FileStats {
-			paths = append(paths, f.Path)
-		}
-		if len(paths) == 0 && tor.Data != "" {
-			var files tsFiles
-			if err := json.Unmarshal([]byte(tor.Data), &files); err == nil {
-				for _, f := range files.TorrServer.Files {
-					paths = append(paths, f.Path)
-				}
-			}
-		}
-	} else if torDB := GetTorrentDB(hash); torDB != nil && torDB.Data != "" {
-		var files tsFiles
-		if err := json.Unmarshal([]byte(torDB.Data), &files); err == nil {
-			for _, f := range files.TorrServer.Files {
-				paths = append(paths, f.Path)
-			}
-		}
-	}
 	if bts.RemoveTorrent(hash) {
 		if sets.BTsets.UseDisk && hashHex != "" && hashHex != "/" {
 			name := filepath.Join(sets.BTsets.TorrentsSavePath, hashHex)
@@ -200,9 +177,7 @@ func RemTorrent(hashHex string) {
 			}
 		}
 	}
-	for _, p := range paths {
-		sets.RemDLNATitle(p)
-	}
+	sets.RemDLNATitles(hashHex)
 	RemTorrentDB(hash)
 }
 
