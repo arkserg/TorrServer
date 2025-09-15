@@ -28,8 +28,9 @@ type BTSets struct {
 	EnableDebug              bool // debug logs
 
 	// DLNA
-	EnableDLNA   bool
-	FriendlyName string
+	EnableDLNA       bool
+	FriendlyName     string
+	DLNATitleWorkers int
 
 	// Rutor
 	EnableRutorSearch bool
@@ -63,6 +64,8 @@ func (v *BTSets) String() string {
 
 var BTsets *BTSets
 
+const DefaultDLNATitleWorkers = 16
+
 func SetBTSets(sets *BTSets) {
 	if ReadOnly {
 		return
@@ -90,6 +93,10 @@ func SetBTSets(sets *BTSets) {
 	}
 	if sets.PreloadCache > 100 {
 		sets.PreloadCache = 100
+	}
+
+	if sets.DLNATitleWorkers <= 0 {
+		sets.DLNATitleWorkers = DefaultDLNATitleWorkers
 	}
 
 	if sets.TorrentsSavePath == "" {
@@ -130,6 +137,7 @@ func SetDefaultConfig() {
 	sets.RetrackersMode = 1
 	sets.TorrentDisconnectTimeout = 30
 	sets.ReaderReadAHead = 95 // 95%
+	sets.DLNATitleWorkers = DefaultDLNATitleWorkers
 	BTsets = sets
 	if !ReadOnly {
 		buf, err := json.Marshal(BTsets)
@@ -148,6 +156,9 @@ func loadBTSets() {
 		if err == nil {
 			if BTsets.ReaderReadAHead < 5 {
 				BTsets.ReaderReadAHead = 5
+			}
+			if BTsets.DLNATitleWorkers <= 0 {
+				BTsets.DLNATitleWorkers = DefaultDLNATitleWorkers
 			}
 			return
 		}
