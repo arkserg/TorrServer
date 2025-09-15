@@ -44,6 +44,7 @@ func InitSets(readOnly, searchWA bool) {
 	dbRouter.RegisterRoute(jsonDB, "Settings")
 	dbRouter.RegisterRoute(jsonDB, "Viewed")
 	dbRouter.RegisterRoute(bboltDB, "Torrents")
+	dbRouter.RegisterRoute(bboltDB, "DLNATitles")
 
 	tdb = NewDBReadCache(dbRouter)
 
