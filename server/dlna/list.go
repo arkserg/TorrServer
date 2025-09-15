@@ -269,11 +269,13 @@ func getObjFromTorrent(path, parent, host string, torr *torr.Torrent, file *stat
 		log.TLogln("mime type", mime.String(), file.Path)
 	}
 
+	title := normalizeTitle(file.Path)
+
 	obj := upnpav.Object{
 		ID:         parent + "%2F" + url.PathEscape(file.Path),
 		ParentID:   parent,
 		Restricted: 1,
-		Title:      file.Path,
+		Title:      title,
 		Class:      "object.item." + mime.Type() + "Item",
 		Date:       upnpav.Timestamp{Time: time.Now()},
 	}

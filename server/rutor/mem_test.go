@@ -22,6 +22,9 @@ func TestParseChannel(t *testing.T) {
 
 	path, _ := os.Getwd()
 	ff, err := os.Open(filepath.Join(path, "rutor.ls"))
+	if os.IsNotExist(err) {
+		t.Skip("rutor.ls not found")
+	}
 	if err == nil {
 		defer ff.Close()
 		r := flate.NewReader(ff)
@@ -51,6 +54,9 @@ func TestParseArr(t *testing.T) {
 	var ftors []*models.TorrentDetails
 	path, _ := os.Getwd()
 	ff, err := os.Open(filepath.Join(path, "rutor.ls"))
+	if os.IsNotExist(err) {
+		t.Skip("rutor.ls not found")
+	}
 	if err == nil {
 		defer ff.Close()
 		r := flate.NewReader(ff)
