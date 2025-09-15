@@ -34,15 +34,19 @@ func (v *DBReadCache) Get(xPath, name string) []byte {
 	cacheKey := v.makeDataCacheKey(xPath, name)
 	v.dataCacheMutex.RLock()
 	if data, ok := v.dataCache[cacheKey]; ok {
-		defer v.dataCacheMutex.RUnlock()
-		return data
+		v.dataCacheMutex.RUnlock()
+		return cloneBytes(data)
 	}
 	v.dataCacheMutex.RUnlock()
+
 	data := v.db.Get(xPath, name)
+	cloned := cloneBytes(data)
+
 	v.dataCacheMutex.Lock()
-	v.dataCache[cacheKey] = data
+	v.dataCache[cacheKey] = cloned
 	v.dataCacheMutex.Unlock()
-	return data
+
+	return cloned
 }
 
 func (v *DBReadCache) Set(xPath, name string, value []byte) {
@@ -85,4 +89,16 @@ func (v *DBReadCache) Rem(xPath, name string) {
 
 func (v *DBReadCache) makeDataCacheKey(xPath, name string) [2]string {
 	return [2]string{xPath, name}
+}
+
+func cloneBytes(data []byte) []byte {
+	if len(data) == 0 {
+		if data == nil {
+			return nil
+		}
+		return []byte{}
+	}
+	cloned := make([]byte, len(data))
+	copy(cloned, data)
+	return cloned
 }

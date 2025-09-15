@@ -38,7 +38,8 @@ var ensureLocks sync.Map
 // It skips regeneration when a bucket for the torrent already exists and guards concurrent
 // workers with a per-torrent mutex to avoid races.
 func EnsureTorrent(hashHex string, paths []string) {
-	if settings.BTsets.EnableDebug {
+	enableDebug := settings.BTsets != nil && settings.BTsets.EnableDebug
+	if enableDebug {
 		log.TLogln("dlnatitles.EnsureTorrent: input", hashHex, len(paths))
 	}
 
@@ -67,41 +68,67 @@ func EnsureTorrent(hashHex string, paths []string) {
 	defer unlock()
 
 	if settings.HasDLNATitleBucket(hashHex) {
-		if settings.BTsets.EnableDebug {
+		if enableDebug {
 			log.TLogln("dlnatitles.EnsureTorrent: bucket already exists")
 		}
 		return
 	}
 
-	titles := make(map[string]string, len(uniquePaths))
-	for _, path := range uniquePaths {
-		title, err := generateNormalizedTitle(path)
-		if err != nil && settings.BTsets.EnableDebug {
-			log.TLogln("dlnatitles.EnsureTorrent: generation failed", err)
-		}
-		title = strings.TrimSpace(title)
-		if title == "" {
-			title = path
-		}
-		titles[path] = title
-		if settings.BTsets.EnableDebug {
-			log.TLogln("dlnatitles.EnsureTorrent: prepared title", path, "->", title)
-		}
+	workers := settings.DefaultDLNATitleWorkers
+	if settings.BTsets != nil && settings.BTsets.DLNATitleWorkers > 0 {
+		workers = settings.BTsets.DLNATitleWorkers
 	}
+	if workers <= 0 {
+		workers = settings.DefaultDLNATitleWorkers
+	}
+
+	titles := make(map[string]string, len(uniquePaths))
+	sem := make(chan struct{}, workers)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+
+	for _, path := range uniquePaths {
+		path := path
+		sem <- struct{}{}
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			defer func() { <-sem }()
+
+			title, err := generateNormalizedTitle(path)
+			if err != nil && enableDebug {
+				log.TLogln("dlnatitles.EnsureTorrent: generation failed", err)
+			}
+			title = strings.TrimSpace(title)
+			if title == "" {
+				title = path
+			}
+
+			mu.Lock()
+			titles[path] = title
+			mu.Unlock()
+
+			if enableDebug {
+				log.TLogln("dlnatitles.EnsureTorrent: prepared title", path, "->", title)
+			}
+		}()
+	}
+
+	wg.Wait()
 
 	if len(titles) == 0 {
 		return
 	}
 
 	if settings.HasDLNATitleBucket(hashHex) {
-		if settings.BTsets.EnableDebug {
+		if enableDebug {
 			log.TLogln("dlnatitles.EnsureTorrent: bucket appeared during generation, skipping store")
 		}
 		return
 	}
 
 	settings.StoreDLNATitles(hashHex, titles)
-	if settings.BTsets.EnableDebug {
+	if enableDebug {
 		log.TLogln("dlnatitles.EnsureTorrent: stored titles", len(titles))
 	}
 }
@@ -141,15 +168,16 @@ func Lookup(hashHex, path string) string {
 func generateNormalizedTitle(path string) (string, error) {
 	apiKey := os.Getenv("OPENAI_API_KEY")
 	model := os.Getenv("OPENAI_MODEL")
+	enableDebug := settings.BTsets != nil && settings.BTsets.EnableDebug
 	if apiKey == "" || model == "" {
-		if settings.BTsets.EnableDebug {
+		if enableDebug {
 			log.TLogln("dlnatitles.generate: missing API key or model")
 		}
 		return path, fmt.Errorf("openai configuration is not set")
 	}
 
 	prompt := fmt.Sprintf("Normalize the following file name into an Infuse-compatible title. For movies use 'Movie Title (Year)'. For TV episodes use 'Show Title SXXEYY'. Return only the normalized title without extension. File name: %s", path)
-	if settings.BTsets.EnableDebug {
+	if enableDebug {
 		log.TLogln("dlnatitles.generate: prompt", prompt)
 	}
 
@@ -160,62 +188,95 @@ func generateNormalizedTitle(path string) (string, error) {
 		},
 		MaxTokens: 50,
 	}
-	buf, err := json.Marshal(reqBody)
+	payload, err := json.Marshal(reqBody)
 	if err != nil {
-		if settings.BTsets.EnableDebug {
+		if enableDebug {
 			log.TLogln("dlnatitles.generate: marshal request failed", err)
 		}
 		return path, err
 	}
 
+	first, err := requestNormalizedTitle(apiKey, payload, 1, enableDebug)
+	if err != nil {
+		return path, err
+	}
+
+	second, err := requestNormalizedTitle(apiKey, payload, 2, enableDebug)
+	if err != nil {
+		return path, err
+	}
+	if first == second {
+		return first, nil
+	}
+
+	third, err := requestNormalizedTitle(apiKey, payload, 3, enableDebug)
+	if err != nil {
+		return path, err
+	}
+	if third == first {
+		return first, nil
+	}
+	if third == second {
+		return second, nil
+	}
+
+	log.TLogln("WARNING dlnatitles.generate: inconsistent normalization responses", path, first, second, third)
+	return path, fmt.Errorf("openai returned inconsistent titles")
+}
+
+func requestNormalizedTitle(apiKey string, payload []byte, attempt int, enableDebug bool) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, "POST", "https://api.openai.com/v1/chat/completions", bytes.NewReader(buf))
+	req, err := http.NewRequestWithContext(ctx, "POST", "https://api.openai.com/v1/chat/completions", bytes.NewReader(payload))
 	if err != nil {
-		if settings.BTsets.EnableDebug {
+		if enableDebug {
 			log.TLogln("dlnatitles.generate: create request failed", err)
 		}
-		return path, err
+		return "", fmt.Errorf("attempt %d: create request failed: %w", attempt, err)
 	}
 	req.Header.Set("Authorization", "Bearer "+apiKey)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		if settings.BTsets.EnableDebug {
+		if enableDebug {
 			log.TLogln("dlnatitles.generate: request failed", err)
 		}
-		return path, err
+		return "", fmt.Errorf("attempt %d: request failed: %w", attempt, err)
 	}
 	defer resp.Body.Close()
 
-	if settings.BTsets.EnableDebug {
-		log.TLogln("dlnatitles.generate: response status", resp.Status)
+	if enableDebug {
+		log.TLogln("dlnatitles.generate: attempt", attempt, "response status", resp.Status)
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return path, fmt.Errorf("openai returned status %s", resp.Status)
+		return "", fmt.Errorf("attempt %d: openai returned status %s", attempt, resp.Status)
 	}
 
 	var respBody openAIChatResponse
 	if err := json.NewDecoder(resp.Body).Decode(&respBody); err != nil {
-		if settings.BTsets.EnableDebug {
+		if enableDebug {
 			log.TLogln("dlnatitles.generate: decode response failed", err)
 		}
-		return path, err
-	}
-	if len(respBody.Choices) > 0 {
-		title := strings.TrimSpace(respBody.Choices[0].Message.Content)
-		if settings.BTsets.EnableDebug {
-			log.TLogln("dlnatitles.generate: normalized title", title)
-		}
-		if title != "" {
-			return title, nil
-		}
-	} else if settings.BTsets.EnableDebug {
-		log.TLogln("dlnatitles.generate: no choices in response")
+		return "", fmt.Errorf("attempt %d: decode response failed: %w", attempt, err)
 	}
 
-	return path, fmt.Errorf("openai returned empty title")
+	if len(respBody.Choices) == 0 {
+		if enableDebug {
+			log.TLogln("dlnatitles.generate: attempt", attempt, "no choices in response")
+		}
+		return "", fmt.Errorf("attempt %d: openai returned empty title", attempt)
+	}
+
+	title := strings.TrimSpace(respBody.Choices[0].Message.Content)
+	if enableDebug {
+		log.TLogln("dlnatitles.generate: attempt", attempt, "normalized title", title)
+	}
+	if title == "" {
+		return "", fmt.Errorf("attempt %d: openai returned empty title", attempt)
+	}
+
+	return title, nil
 }

@@ -22,6 +22,7 @@ export default function SecondarySettingsComponent({ settings, inputForm }) {
     EnableDLNA,
     EnableIPv6,
     FriendlyName,
+    DLNATitleWorkers,
     EnableRutorSearch,
     ForceEncrypt,
     DisableTCP,
@@ -185,6 +186,17 @@ export default function SecondarySettingsComponent({ settings, inputForm }) {
         helperText={t('SettingsDialog.FriendlyNameHint')}
         value={FriendlyName}
         type='text'
+        variant='outlined'
+        fullWidth
+      />
+      <TextField
+        onChange={inputForm}
+        margin='normal'
+        id='DLNATitleWorkers'
+        label={t('SettingsDialog.DLNATitleWorkers')}
+        helperText={t('SettingsDialog.DLNATitleWorkersHint')}
+        value={DLNATitleWorkers}
+        type='number'
         variant='outlined'
         fullWidth
       />

@@ -143,6 +143,8 @@
         "ForceEncryptHint": "Може да помогне с доставчици, блокиращи торенти",
         "FriendlyName": "Име на DLNA сървъра",
         "FriendlyNameHint": "Оставете празно, за да използвате по подразбиране",
+        "DLNATitleWorkers": "Нишки за нормализиране DLNA",
+        "DLNATitleWorkersHint": "Брой паралелни заявки за нормализиране на DLNA заглавия (по подразбиране: 16)",
         "EnableRutorSearch": "Включете търсенето на торенти от RuTor",
         "EnableRutorSearchHint": "Можете да търсите торенти чрез RuTor, дори ако RuTor не е наличен. ЗАБЕЛЕЖКА: Базата данни отнема около 500 MB RAM.",
         "PeersListenPort": "Порт за слушане на пиъри",
