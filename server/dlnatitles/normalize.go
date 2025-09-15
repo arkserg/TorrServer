@@ -1,4 +1,4 @@
-package dlna
+package dlnatitles
 
 import (
 	"bytes"
@@ -31,31 +31,72 @@ type openAIChatResponse struct {
 	} `json:"choices"`
 }
 
-func normalizeTitle(hashHex, path string) string {
+// Ensure makes sure the DLNA title cache for a given torrent file contains a normalized title.
+// It returns the cached title, generating and storing one using OpenAI if necessary.
+func Ensure(hashHex, path string) string {
 	if settings.BTsets.EnableDebug {
-		log.TLogln("normalizeTitle: input", hashHex, path)
+		log.TLogln("dlnatitles.Ensure: input", hashHex, path)
 	}
 
 	if cached := settings.GetDLNATitle(hashHex, path); cached != "" {
 		if settings.BTsets.EnableDebug {
-			log.TLogln("normalizeTitle: cache hit", cached)
+			log.TLogln("dlnatitles.Ensure: cache hit", cached)
 		}
 		return cached
 	}
 
+	title, err := generateNormalizedTitle(path)
+	if err != nil {
+		if settings.BTsets.EnableDebug {
+			log.TLogln("dlnatitles.Ensure: generation failed", err)
+		}
+	}
+	if title == "" {
+		title = path
+	}
+
+	settings.SetDLNATitle(hashHex, path, title)
+	if settings.BTsets.EnableDebug {
+		log.TLogln("dlnatitles.Ensure: stored title", title)
+	}
+
+	return title
+}
+
+// Lookup returns the cached DLNA title for the given torrent file or falls back to the original path.
+func Lookup(hashHex, path string) string {
+	if settings.BTsets.EnableDebug {
+		log.TLogln("dlnatitles.Lookup: input", hashHex, path)
+	}
+
+	if cached := settings.GetDLNATitle(hashHex, path); cached != "" {
+		if settings.BTsets.EnableDebug {
+			log.TLogln("dlnatitles.Lookup: cache hit", cached)
+		}
+		return cached
+	}
+
+	if settings.BTsets.EnableDebug {
+		log.TLogln("dlnatitles.Lookup: fallback to original path")
+	}
+	return path
+}
+
+func generateNormalizedTitle(path string) (string, error) {
 	apiKey := os.Getenv("OPENAI_API_KEY")
 	model := os.Getenv("OPENAI_MODEL")
 	if apiKey == "" || model == "" {
 		if settings.BTsets.EnableDebug {
-			log.TLogln("normalizeTitle: missing API key or model, returning original")
+			log.TLogln("dlnatitles.generate: missing API key or model")
 		}
-		return path
+		return path, fmt.Errorf("openai configuration is not set")
 	}
 
 	prompt := fmt.Sprintf("Normalize the following file name into an Infuse-compatible title. For movies use 'Movie Title (Year)'. For TV episodes use 'Show Title SXXEYY'. Return only the normalized title without extension. File name: %s", path)
 	if settings.BTsets.EnableDebug {
-		log.TLogln("normalizeTitle: prompt", prompt)
+		log.TLogln("dlnatitles.generate: prompt", prompt)
 	}
+
 	reqBody := openAIChatRequest{
 		Model: model,
 		Messages: []openAIChatMessage{
@@ -66,9 +107,9 @@ func normalizeTitle(hashHex, path string) string {
 	buf, err := json.Marshal(reqBody)
 	if err != nil {
 		if settings.BTsets.EnableDebug {
-			log.TLogln("normalizeTitle: marshal request failed", err)
+			log.TLogln("dlnatitles.generate: marshal request failed", err)
 		}
-		return path
+		return path, err
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -77,9 +118,9 @@ func normalizeTitle(hashHex, path string) string {
 	req, err := http.NewRequestWithContext(ctx, "POST", "https://api.openai.com/v1/chat/completions", bytes.NewReader(buf))
 	if err != nil {
 		if settings.BTsets.EnableDebug {
-			log.TLogln("normalizeTitle: create request failed", err)
+			log.TLogln("dlnatitles.generate: create request failed", err)
 		}
-		return path
+		return path, err
 	}
 	req.Header.Set("Authorization", "Bearer "+apiKey)
 	req.Header.Set("Content-Type", "application/json")
@@ -87,38 +128,38 @@ func normalizeTitle(hashHex, path string) string {
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		if settings.BTsets.EnableDebug {
-			log.TLogln("normalizeTitle: request failed", err)
+			log.TLogln("dlnatitles.generate: request failed", err)
 		}
-		return path
+		return path, err
 	}
 	defer resp.Body.Close()
 
 	if settings.BTsets.EnableDebug {
-		log.TLogln("normalizeTitle: response status", resp.Status)
+		log.TLogln("dlnatitles.generate: response status", resp.Status)
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return path, fmt.Errorf("openai returned status %s", resp.Status)
 	}
 
 	var respBody openAIChatResponse
 	if err := json.NewDecoder(resp.Body).Decode(&respBody); err != nil {
 		if settings.BTsets.EnableDebug {
-			log.TLogln("normalizeTitle: decode response failed", err)
+			log.TLogln("dlnatitles.generate: decode response failed", err)
 		}
-		return path
+		return path, err
 	}
 	if len(respBody.Choices) > 0 {
 		title := strings.TrimSpace(respBody.Choices[0].Message.Content)
 		if settings.BTsets.EnableDebug {
-			log.TLogln("normalizeTitle: normalized title", title)
+			log.TLogln("dlnatitles.generate: normalized title", title)
 		}
 		if title != "" {
-			settings.SetDLNATitle(hashHex, path, title)
-			return title
+			return title, nil
 		}
 	} else if settings.BTsets.EnableDebug {
-		log.TLogln("normalizeTitle: no choices in response")
+		log.TLogln("dlnatitles.generate: no choices in response")
 	}
 
-	if settings.BTsets.EnableDebug {
-		log.TLogln("normalizeTitle: returning original path")
-	}
-	return path
+	return path, fmt.Errorf("openai returned empty title")
 }
