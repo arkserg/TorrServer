@@ -38,6 +38,7 @@ export default function SecondarySettingsComponent({ settings, inputForm }) {
     SslPort,
     SslCert,
     SslKey,
+    StreamLinksPath,
   } = settings || {}
 
   return (
@@ -165,13 +166,24 @@ export default function SecondarySettingsComponent({ settings, inputForm }) {
         fullWidth
       />
       <FormGroup>
-        <FormControlLabel
-          control={<Switch checked={!DisableUPNP} onChange={inputForm} id='DisableUPNP' color='secondary' />}
-          label='UPnP (Universal Plug and Play)'
-          labelPlacement='start'
-        />
-        <FormHelperText margin='none'>{t('SettingsDialog.DisableUPNPHint')}</FormHelperText>
-      </FormGroup>
+      <FormControlLabel
+        control={<Switch checked={!DisableUPNP} onChange={inputForm} id='DisableUPNP' color='secondary' />}
+        label='UPnP (Universal Plug and Play)'
+        labelPlacement='start'
+      />
+      <FormHelperText margin='none'>{t('SettingsDialog.DisableUPNPHint')}</FormHelperText>
+    </FormGroup>
+    <TextField
+      onChange={inputForm}
+      margin='normal'
+      id='StreamLinksPath'
+      label={t('SettingsDialog.StreamLinksPath')}
+      helperText={t('SettingsDialog.StreamLinksPathHint')}
+      value={StreamLinksPath}
+      type='url'
+      variant='outlined'
+      fullWidth
+    />
       <FormControlLabel
         control={<Switch checked={EnableDLNA} onChange={inputForm} id='EnableDLNA' color='secondary' />}
         label={t('SettingsDialog.DLNA')}
@@ -188,7 +200,7 @@ export default function SecondarySettingsComponent({ settings, inputForm }) {
         variant='outlined'
         fullWidth
       />
-      <FormGroup>
+    <FormGroup>
         <FormControlLabel
           control={<Switch checked={EnableRutorSearch} onChange={inputForm} id='EnableRutorSearch' color='secondary' />}
           label={t('SettingsDialog.EnableRutorSearch')}

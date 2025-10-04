@@ -55,6 +55,8 @@ func addTorrent(c tele.Context, link string) error {
 		}
 	}
 
+	tor.EnsureStreamLinks()
+
 	torr.SaveTorrentToDB(tor)
 
 	c.Bot().Edit(msg, "Торрент добавлен:\n<code>"+link+"</code>")

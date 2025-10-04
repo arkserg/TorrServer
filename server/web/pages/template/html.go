@@ -118,20 +118,20 @@ var Mstile150x150png []byte
 //go:embed pages/site.webmanifest
 var Sitewebmanifest []byte
 
-//go:embed pages/static/js/2.86893fce.chunk.js
-var Staticjs286893fcechunkjs []byte
+//go:embed pages/static/js/2.8b657f97.chunk.js
+var Staticjs28b657f97chunkjs []byte
 
-//go:embed pages/static/js/2.86893fce.chunk.js.LICENSE.txt
-var Staticjs286893fcechunkjsLICENSEtxt []byte
+//go:embed pages/static/js/2.8b657f97.chunk.js.LICENSE.txt
+var Staticjs28b657f97chunkjsLICENSEtxt []byte
 
-//go:embed pages/static/js/2.86893fce.chunk.js.map
-var Staticjs286893fcechunkjsmap []byte
+//go:embed pages/static/js/2.8b657f97.chunk.js.map
+var Staticjs28b657f97chunkjsmap []byte
 
-//go:embed pages/static/js/main.c80cc924.chunk.js
-var Staticjsmainc80cc924chunkjs []byte
+//go:embed pages/static/js/main.a8c55612.chunk.js
+var Staticjsmaina8c55612chunkjs []byte
 
-//go:embed pages/static/js/main.c80cc924.chunk.js.map
-var Staticjsmainc80cc924chunkjsmap []byte
+//go:embed pages/static/js/main.a8c55612.chunk.js.map
+var Staticjsmaina8c55612chunkjsmap []byte
 
 //go:embed pages/static/js/runtime-main.5ed86a79.js
 var Staticjsruntimemain5ed86a79js []byte

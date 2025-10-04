@@ -3,29 +3,32 @@ package settings
 import (
 	"os"
 	"path/filepath"
+	"strings"
 
 	"server/log"
 )
 
 var (
-	tdb      TorrServerDB
-	Path     string
-	IP       string
-	Port     string
-	Ssl      bool
-	SslPort  string
-	ReadOnly bool
-	HttpAuth bool
-	SearchWA bool
-	PubIPv4  string
-	PubIPv6  string
-	TorAddr  string
-	MaxSize  int64
+	tdb             TorrServerDB
+	Path            string
+	StreamLinksPath string
+	IP              string
+	Port            string
+	Ssl             bool
+	SslPort         string
+	ReadOnly        bool
+	HttpAuth        bool
+	SearchWA        bool
+	PubIPv4         string
+	PubIPv6         string
+	TorAddr         string
+	MaxSize         int64
 )
 
 func InitSets(readOnly, searchWA bool) {
 	ReadOnly = readOnly
 	SearchWA = searchWA
+	cliStreamLinks := strings.TrimSpace(StreamLinksPath)
 
 	bboltDB := NewTDB()
 	if bboltDB == nil {
@@ -44,7 +47,7 @@ func InitSets(readOnly, searchWA bool) {
 	dbRouter.RegisterRoute(jsonDB, "Settings")
 	dbRouter.RegisterRoute(jsonDB, "Viewed")
 	dbRouter.RegisterRoute(bboltDB, "Torrents")
-
+	
 	tdb = NewDBReadCache(dbRouter)
 
 	// We migrate settings here, it must be done before loadBTSets()
@@ -53,6 +56,12 @@ func InitSets(readOnly, searchWA bool) {
 		os.Exit(1)
 	}
 	loadBTSets()
+	if cliStreamLinks != "" {
+		StreamLinksPath = cliStreamLinks
+		if BTsets != nil {
+			BTsets.StreamLinksPath = cliStreamLinks
+		}
+	}
 	MigrateTorrents()
 }
 

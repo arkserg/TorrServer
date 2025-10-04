@@ -19,6 +19,7 @@ type BTSets struct {
 	// Disk
 	UseDisk           bool
 	TorrentsSavePath  string
+	StreamLinksPath   string
 	RemoveCacheOnDrop bool
 
 	// Torrent
@@ -113,6 +114,7 @@ func SetBTSets(sets *BTSets) {
 		})
 	}
 
+	sets.StreamLinksPath = strings.TrimSpace(sets.StreamLinksPath)
 	BTsets = sets
 	buf, err := json.Marshal(BTsets)
 	if err != nil {
@@ -120,6 +122,7 @@ func SetBTSets(sets *BTSets) {
 		return
 	}
 	tdb.Set("Settings", "BitTorr", buf)
+	StreamLinksPath = BTsets.StreamLinksPath
 }
 
 func SetDefaultConfig() {
@@ -131,6 +134,7 @@ func SetDefaultConfig() {
 	sets.TorrentDisconnectTimeout = 30
 	sets.ReaderReadAHead = 95 // 95%
 	BTsets = sets
+	StreamLinksPath = ""
 	if !ReadOnly {
 		buf, err := json.Marshal(BTsets)
 		if err != nil {
@@ -148,6 +152,11 @@ func loadBTSets() {
 		if err == nil {
 			if BTsets.ReaderReadAHead < 5 {
 				BTsets.ReaderReadAHead = 5
+			}
+			if strings.TrimSpace(StreamLinksPath) == "" {
+				StreamLinksPath = strings.TrimSpace(BTsets.StreamLinksPath)
+			} else {
+				BTsets.StreamLinksPath = StreamLinksPath
 			}
 			return
 		}

@@ -4,6 +4,7 @@ export default {
   PreloadCache: 50,
   UseDisk: false,
   TorrentsSavePath: '',
+  StreamLinksPath: '',
   RemoveCacheOnDrop: false,
   ForceEncrypt: false,
   RetrackersMode: 1,

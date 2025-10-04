@@ -96,6 +96,8 @@ func torrentUpload(c *gin.Context) {
 				tor.Title = tor.Name()
 			}
 
+			tor.EnsureStreamLinks()
+
 			if save {
 				torr.SaveTorrentToDB(tor)
 			}

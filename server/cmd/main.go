@@ -33,6 +33,7 @@ type args struct {
 	SslCert     string `help:"path to ssl cert file. If not set, will be taken from db(if stored previously) or default self-signed certificate/key will be generated. Accepted if --ssl enabled."`
 	SslKey      string `help:"path to ssl key file. If not set, will be taken from db(if stored previously) or default self-signed certificate/key will be generated. Accepted if --ssl enabled."`
 	Path        string `arg:"-d" help:"database and config dir path"`
+	StreamLinks string `arg:"--slp" help:"root directory for generated .strm files (relative paths are resolved against --path)"`
 	LogPath     string `arg:"-l" help:"server log file path"`
 	WebLogPath  string `arg:"-w" help:"web access log file path"`
 	RDB         bool   `arg:"-r" help:"start in read-only DB mode"`
@@ -68,6 +69,7 @@ func main() {
 	}
 
 	settings.Path = params.Path
+	settings.StreamLinksPath = params.StreamLinks
 	settings.HttpAuth = params.HttpAuth
 	log.Init(params.LogPath, params.WebLogPath)
 	fmt.Println("=========== START ===========")
@@ -165,6 +167,7 @@ func watchTDir(dir string) {
 								if tor.Title == "" {
 									tor.Title = tor.Name()
 								}
+								tor.EnsureStreamLinks()
 								torr.SaveTorrentToDB(tor)
 								tor.Drop()
 								os.Remove(filename)
