@@ -6,9 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 	"time"
+
+	"server/settings"
 )
 
 type openAIChatMessage struct {
@@ -29,8 +30,7 @@ type openAIChatResponse struct {
 }
 
 func normalizeTitle(path string) string {
-	apiKey := os.Getenv("OPENAI_API_KEY")
-	model := os.Getenv("OPENAI_MODEL")
+	apiKey, model := settings.GetOpenAIConfig()
 	if apiKey == "" || model == "" {
 		return path
 	}

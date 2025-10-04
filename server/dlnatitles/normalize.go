@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -166,8 +165,7 @@ func Lookup(hashHex, path string) string {
 }
 
 func generateNormalizedTitle(path string) (string, error) {
-	apiKey := os.Getenv("OPENAI_API_KEY")
-	model := os.Getenv("OPENAI_MODEL")
+	apiKey, model := settings.GetOpenAIConfig()
 	enableDebug := settings.BTsets != nil && settings.BTsets.EnableDebug
 	if apiKey == "" || model == "" {
 		if enableDebug {

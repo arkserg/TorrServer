@@ -39,6 +39,8 @@ export default function SecondarySettingsComponent({ settings, inputForm }) {
     SslPort,
     SslCert,
     SslKey,
+    OpenAIKey = '',
+    OpenAIModel = '',
   } = settings || {}
 
   return (
@@ -197,6 +199,29 @@ export default function SecondarySettingsComponent({ settings, inputForm }) {
         helperText={t('SettingsDialog.DLNATitleWorkersHint')}
         value={DLNATitleWorkers}
         type='number'
+        variant='outlined'
+        fullWidth
+      />
+      <TextField
+        onChange={inputForm}
+        margin='normal'
+        id='OpenAIKey'
+        label={t('SettingsDialog.OpenAIKey')}
+        helperText={t('SettingsDialog.OpenAIKeyHint')}
+        value={OpenAIKey}
+        type='password'
+        variant='outlined'
+        fullWidth
+        autoComplete='off'
+      />
+      <TextField
+        onChange={inputForm}
+        margin='normal'
+        id='OpenAIModel'
+        label={t('SettingsDialog.OpenAIModel')}
+        helperText={t('SettingsDialog.OpenAIModelHint')}
+        value={OpenAIModel}
+        type='text'
         variant='outlined'
         fullWidth
       />

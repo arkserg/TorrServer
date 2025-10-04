@@ -28,4 +28,6 @@ export default {
   SslPort: 0,
   SslCert: '',
   SslKey: '',
+  OpenAIKey: '',
+  OpenAIModel: '',
 }

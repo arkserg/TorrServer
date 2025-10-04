@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -55,6 +56,10 @@ type BTSets struct {
 
 	// Reader
 	ResponsiveMode bool // enable Responsive reader (don't wait pieceComplete)
+
+	// OpenAI
+	OpenAIKey   string
+	OpenAIModel string
 }
 
 func (v *BTSets) String() string {
@@ -147,6 +152,20 @@ func SetDefaultConfig() {
 		}
 		tdb.Set("Settings", "BitTorr", buf)
 	}
+}
+
+func GetOpenAIConfig() (apiKey, model string) {
+	if BTsets != nil {
+		apiKey = strings.TrimSpace(BTsets.OpenAIKey)
+		model = strings.TrimSpace(BTsets.OpenAIModel)
+	}
+	if apiKey == "" {
+		apiKey = strings.TrimSpace(os.Getenv("OPENAI_API_KEY"))
+	}
+	if model == "" {
+		model = strings.TrimSpace(os.Getenv("OPENAI_MODEL"))
+	}
+	return apiKey, model
 }
 
 func loadBTSets() {
