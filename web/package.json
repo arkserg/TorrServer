@@ -28,10 +28,10 @@
     "uuid": "^8.3.2"
   },
   "scripts": {
-    "start": "node --openssl-legacy-provider node_modules/react-scripts/bin/react-scripts.js start",
-    "build": "node --openssl-legacy-provider node_modules/react-scripts/bin/react-scripts.js build",
-    "test": "node --openssl-legacy-provider node_modules/react-scripts/bin/react-scripts.js test",
-    "eject": "node --openssl-legacy-provider node_modules/react-scripts/bin/react-scripts.js eject",
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
     "lint": "eslint --ext .js,.jsx src --color",
     "fix": "yarn lint --fix"
   },
