@@ -179,6 +179,7 @@ func RemTorrent(hashHex string) {
 		}
 	}
 	sets.RemDLNATitles(hashHex)
+	removeStreamLinkDir(hashHex)
 	RemTorrentDB(hash)
 }
 
